@@ -5,11 +5,11 @@
 #include <Arduino.h>
 #include <DHT.h>
 
-class TemperatureHumiditySensor {
+class TemperatureHumiditySensor { // class define
 public:
-    TemperatureHumiditySensor(int dhtPin, int dhtType);
+    TemperatureHumiditySensor(int dhtPin, int dhtType); //constructor including the attributes
 
-    void initialize();
+    void initialize(); 
     void readSensor();
 
 private:

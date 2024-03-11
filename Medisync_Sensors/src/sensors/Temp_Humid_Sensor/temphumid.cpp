@@ -71,7 +71,6 @@ void TemperatureHumiditySensor::readSensor() {
         return;
     }
 
-
     // Check temperature and humidity conditions
     if (t > 30) {
         Serial.println("Pill box overheat");
@@ -94,5 +93,5 @@ void TemperatureHumiditySensor::readSensor() {
     Serial.println(" *C");
 
     // Delay before next iteration
-    delay(2000);
+    delay(500);
 }

@@ -36,17 +36,19 @@ LightSensor::LightSensor(int ldrPin, int ledPin) : _ldrPin(ldrPin), _ledPin(ledP
 void LightSensor::initialize() {
     pinMode(_ldrPin, INPUT);
     pinMode(_ledPin, OUTPUT);
-    Serial.begin(9600);
 }
 
 // Member function to read sensor values
 void LightSensor::readSensor() {
     int ldrValue = analogRead(_ldrPin);
-    Serial.print("LDR Value: ");
-    Serial.println(ldrValue);
+    //Serial.print("LDR Value: ");
+    //Serial.println(ldrValue);
 
-    if (ldrValue <= 5) {
+
+    if (ldrValue <= 3) {
         digitalWrite(_ledPin, HIGH);
+        Serial.println("Close the lid");
+        
     } else {
         digitalWrite(_ledPin, LOW);
     }
