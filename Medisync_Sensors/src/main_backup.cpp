@@ -101,9 +101,10 @@ void loop() {
             Serial.println("Payload:");
             Serial.println(payload);
 
+            String url = SendToDatabaseUrl + String(boxId);
 
             HTTPClient http;
-            http.begin(SendToDatabaseUrl);
+            http.begin(url);
             http.addHeader("Content-Type", "application/json");
             int httpResponseCode = http.POST(payload);
             if (httpResponseCode > 0) {
