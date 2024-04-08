@@ -32,6 +32,11 @@ TemperatureHumiditySensor tempHumidSensor3(dhtPin3, dhtType, 3);
 //weightnotify weightsensor(weightPin, buzzerPin);
 //tankservo tankservom(fingerprint_pin, servoPin);
 
+const char* ssid;
+const char* password;
+int boxId;
+const char* serverUrl = "https://medisyncconnection.azurewebsites.net/api/setTankInfo/";
+
 
 void setup() {
 
@@ -85,8 +90,57 @@ void loop() {
     tempHumidSensor1.readSensor();
     tempHumidSensor2.readSensor();
     tempHumidSensor3.readSensor();
-    //weightsensor.checkWeight();
-    //tankservom.moveServo();
+
+    
+  int tankNumber1;
+  float temperature1;
+  float humidity1; 
+  int lightValue1;
+  tempHumidSensor1.getTankData(tankNumber1, temperature1, humidity1);
+  lightSensor1.getTankSensorData(tankNumber1, lightValue1);
+
+  int tankNumber2;
+  float temperature2;
+  float humidity2; 
+  int lightValue2;
+  tempHumidSensor2.getTankData(tankNumber2, temperature2, humidity2);
+  lightSensor2.getTankSensorData(tankNumber2, lightValue2);
+
+  int tankNumber3;
+  float temperature3;
+  float humidity3; 
+  int lightValue3;
+  tempHumidSensor3.getTankData(tankNumber3, temperature3, humidity3);
+  lightSensor3.getTankSensorData(tankNumber3, lightValue3);
+  
+  // Create JSON payload
+  String payload = "[";
+  payload += "{\"tankNumber\":" + String(tankNumber1) + ",\"temperature\":" + String(temperature1) + ",\"humidity\":" + String(humidity1) + ",\"lightValue\":" + String(lightValue1) + "},";
+  payload += "{\"tankNumber\":" + String(tankNumber2) + ",\"temperature\":" + String(temperature2) + ",\"humidity\":" + String(humidity2) + ",\"lightValue\":" + String(lightValue2) + "},";
+  payload += "{\"tankNumber\":" + String(tankNumber3) + ",\"temperature\":" + String(temperature3) + ",\"humidity\":" + String(humidity3) + ",\"lightValue\":" + String(lightValue3) + "}";
+  payload += "]";
+
+  // Append box ID to the server URL
+  String url = serverUrl + String(boxId);
+    // Send HTTP POST request
+  HTTPClient http;
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  int httpResponseCode = http.POST(payload);
+  if (httpResponseCode > 0) {
+        String response = http.getString();
+        Serial.println("HTTP POST response:");
+        Serial.println(httpResponseCode);
+        Serial.println(response);
+    } else {
+        Serial.println("HTTP POST request failed");
+    }
+  http.end();
+
+  delay(5000);
+ 
+
+    
     
     }
     
