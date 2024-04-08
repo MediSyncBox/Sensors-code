@@ -22,20 +22,24 @@ const int buzzerPin = 5;
 //const int fingerprint_pin = 9; 
 //const int servoPin = 6;
 
+TemperatureHumiditySensor tempHumidSensors[] = {
+    TemperatureHumiditySensor(dhtPin1, dhtType, 1),
+    TemperatureHumiditySensor(dhtPin2, dhtType, 2),
+    TemperatureHumiditySensor(dhtPin3, dhtType, 3)
+};
 
-LightSensor lightSensor1(ldrPin1, ledPin1, 1);
-LightSensor lightSensor2(ldrPin2, ledPin2, 2);
-LightSensor lightSensor3(ldrPin3, ledPin3, 3);
-TemperatureHumiditySensor tempHumidSensor1(dhtPin1, dhtType, 1);
-TemperatureHumiditySensor tempHumidSensor2(dhtPin2, dhtType, 2);
-TemperatureHumiditySensor tempHumidSensor3(dhtPin3, dhtType, 3);
-//weightnotify weightsensor(weightPin, buzzerPin);
-//tankservo tankservom(fingerprint_pin, servoPin);
+LightSensor lightSensors[] = { 
+    LightSensor(ldrPin1, ledPin1, 1),
+    LightSensor(ldrPin2, ledPin2, 2),
+    LightSensor(ldrPin3, ledPin3, 3)
+};
+
+const int numSensors = sizeof(tempHumidSensors) / sizeof(tempHumidSensors[0]);
 
 const char* ssid;
 const char* password;
 int boxId;
-const char* serverUrl = "https://medisyncconnection.azurewebsites.net/api/setTankInfo/";
+const char* SendToDatabaseUrl = "https://medisyncconnection.azurewebsites.net/api/setTankInfo/";
 
 
 void setup() {
@@ -72,71 +76,47 @@ void setup() {
     // }
     // IoTHubClient_LL_SetMessageCallback(iothubClient, ReceiveMessageCallback, NULL);
 
-    lightSensor1.initialize();
-    lightSensor2.initialize();
-    lightSensor3.initialize();
-    tempHumidSensor1.initialize();
-    tempHumidSensor2.initialize();
-    tempHumidSensor3.initialize();
-    //weightsensor.initialize();
-    //tankservom.initialize();
+    for (int i = 0; i < numSensors; i++) {
+        tempHumidSensors[i].initialize();
+        lightSensors[i].initialize();
+    }
 
 }
 
 void loop() {
-    lightSensor1.readSensor();
-    lightSensor2.readSensor();
-    lightSensor3.readSensor();
-    tempHumidSensor1.readSensor();
-    tempHumidSensor2.readSensor();
-    tempHumidSensor3.readSensor();
+    for (int i = 0; i < numSensors; i++) {
+        tempHumidSensors[i].readSensor();
+        lightSensors[i].readSensor();
 
-    
-  int tankNumber1;
-  float temperature1;
-  float humidity1; 
-  int lightValue1;
-  tempHumidSensor1.getTankData(tankNumber1, temperature1, humidity1);
-  lightSensor1.getTankSensorData(tankNumber1, lightValue1);
+        int tankNumber;
+        float temperature;
+        float humidity;
+        int lightValue;
+        tempHumidSensors[i].getTankSensorData(tankNumber, temperature, humidity);
+        lightSensors[i].getTankSensorData(tankNumber, lightValue);
 
-  int tankNumber2;
-  float temperature2;
-  float humidity2; 
-  int lightValue2;
-  tempHumidSensor2.getTankData(tankNumber2, temperature2, humidity2);
-  lightSensor2.getTankSensorData(tankNumber2, lightValue2);
+        if (!isnan(temperature) && !isnan(humidity)) {
+            String payload = "{\"boxId\":" + String(boxId) + ",\"tankNumber\":" + String(tankNumber) + ",\"temperature\":" + String(temperature) + ",\"humidity\":" + String(humidity) + ",\"lightValue\":" + String(lightValue) + "}";
 
-  int tankNumber3;
-  float temperature3;
-  float humidity3; 
-  int lightValue3;
-  tempHumidSensor3.getTankData(tankNumber3, temperature3, humidity3);
-  lightSensor3.getTankSensorData(tankNumber3, lightValue3);
-  
-  // Create JSON payload
-  String payload = "[";
-  payload += "{\"tankNumber\":" + String(tankNumber1) + ",\"temperature\":" + String(temperature1) + ",\"humidity\":" + String(humidity1) + ",\"lightValue\":" + String(lightValue1) + "},";
-  payload += "{\"tankNumber\":" + String(tankNumber2) + ",\"temperature\":" + String(temperature2) + ",\"humidity\":" + String(humidity2) + ",\"lightValue\":" + String(lightValue2) + "},";
-  payload += "{\"tankNumber\":" + String(tankNumber3) + ",\"temperature\":" + String(temperature3) + ",\"humidity\":" + String(humidity3) + ",\"lightValue\":" + String(lightValue3) + "}";
-  payload += "]";
+            Serial.println("Payload:");
+            Serial.println(payload);
 
-  // Append box ID to the server URL
-  String url = serverUrl + String(boxId);
-    // Send HTTP POST request
-  HTTPClient http;
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
-  int httpResponseCode = http.POST(payload);
-  if (httpResponseCode > 0) {
-        String response = http.getString();
-        Serial.println("HTTP POST response:");
-        Serial.println(httpResponseCode);
-        Serial.println(response);
-    } else {
-        Serial.println("HTTP POST request failed");
+
+            HTTPClient http;
+            http.begin(SendToDatabaseUrl);
+            http.addHeader("Content-Type", "application/json");
+            int httpResponseCode = http.POST(payload);
+            if (httpResponseCode > 0) {
+                String response = http.getString();
+                Serial.println("HTTP POST response:")
+                Serial.println(httpResponseCode);
+                Serial.println(response);
+            } else {
+                Serial.println("HTTP POST request failed");
+            }
+            http.end();
+        }
     }
-  http.end();
-
   delay(5000);
  
 
