@@ -3,7 +3,7 @@
 #include "sensors/Light_Sensor/LightSensor.h"
 #include "sensors/Temp_Humid_Sensor/temphumid.h"
 #include "sensors/pillsout_servo_time/tankservo.h"
-//#include "sensors/IR_finalout/IRout.h"
+// #include "sensors/IR_finalout/IRout.h"
 #include "sensors/Weight_takepills/weight.h"
 #include <WiFi.h>
 
@@ -15,34 +15,32 @@ const int ldrPin3 = A2; // LDR connected to pin A7
 const int ledPin3 = 4;
 const int dhtPin1 = A3;
 const int dhtPin2 = A4;
-const int dhtPin3 = A5;     // DHT sensor connected to pin A6
+const int dhtPin3 = A5;    // DHT sensor connected to pin A6
 const int dhtType = DHT22; // DHT sensor type
 const int weightPin = A6;
 const int buzzerPin = 5;
-//const int fingerprint_pin = 9; 
-//const int servoPin = 6;
+// const int fingerprint_pin = 9;
+// const int servoPin = 6;
 
 TemperatureHumiditySensor tempHumidSensors[] = {
     TemperatureHumiditySensor(dhtPin1, dhtType, 1),
     TemperatureHumiditySensor(dhtPin2, dhtType, 2),
-    TemperatureHumiditySensor(dhtPin3, dhtType, 3)
-};
+    TemperatureHumiditySensor(dhtPin3, dhtType, 3)};
 
-LightSensor lightSensors[] = { 
+LightSensor lightSensors[] = {
     LightSensor(ldrPin1, ledPin1, 1),
     LightSensor(ldrPin2, ledPin2, 2),
-    LightSensor(ldrPin3, ledPin3, 3)
-};
+    LightSensor(ldrPin3, ledPin3, 3)};
 
 const int numSensors = sizeof(tempHumidSensors) / sizeof(tempHumidSensors[0]);
 
-const char* ssid;
-const char* password;
+const char *ssid;
+const char *password;
 int boxId;
-const char* SendToDatabaseUrl = "https://medisyncconnection.azurewebsites.net/api/setTankInfo/";
+const char *SendToDatabaseUrl = "https://medisyncconnection.azurewebsites.net/api/setTankInfo/";
 
-
-void setup() {
+void setup()
+{
 
     Serial.begin(115200);
     delay(1000); // Wait for serial monitor to initialize
@@ -76,15 +74,17 @@ void setup() {
     // }
     // IoTHubClient_LL_SetMessageCallback(iothubClient, ReceiveMessageCallback, NULL);
 
-    for (int i = 0; i < numSensors; i++) {
+    for (int i = 0; i < numSensors; i++)
+    {
         tempHumidSensors[i].initialize();
         lightSensors[i].initialize();
     }
-
 }
 
-void loop() {
-    for (int i = 0; i < numSensors; i++) {
+void loop()
+{
+    for (int i = 0; i < numSensors; i++)
+    {
         tempHumidSensors[i].readSensor();
         lightSensors[i].readSensor();
 
@@ -95,8 +95,9 @@ void loop() {
         tempHumidSensors[i].getTankSensorData(tankNumber, temperature, humidity);
         lightSensors[i].getTankSensorData(tankNumber, lightValue);
 
-        if (!isnan(temperature) && !isnan(humidity)) {
-            String payload = "{\"box_id\":" + String(boxId) + ",\"servo_id\":" + String(tankNumber) + ",\"temperature\":" + String(temperature) + ",\"humidity\":" + String(humidity) "}";
+        if (!isnan(temperature) && !isnan(humidity))
+        {
+            String payload = "{\"servo_id\":" + String(tankNumber) + ",\"temperature\":" + String(temperature) + ",\"humidity\":" + String(humidity) + "}";
 
             Serial.println("Payload:");
             Serial.println(payload);
@@ -107,21 +108,19 @@ void loop() {
             http.begin(url);
             http.addHeader("Content-Type", "application/json");
             int httpResponseCode = http.POST(payload);
-            if (httpResponseCode > 0) {
+            if (httpResponseCode > 0)
+            {
                 String response = http.getString();
-                Serial.println("HTTP POST response:")
-                Serial.println(httpResponseCode);
+                Serial.print("HTTP POST response: ");
                 Serial.println(response);
-            } else {
-                Serial.println("HTTP POST request failed");
+            }
+            else
+            {
+                Serial.print("HTTP POST request failed, error code: ");
+                Serial.println(httpResponseCode);
             }
             http.end();
         }
     }
-  delay(5000);
- 
-
-    
-    
-    }
-    
+    delay(5000);
+}
