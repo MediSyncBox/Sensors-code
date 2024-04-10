@@ -96,7 +96,7 @@ void loop() {
         lightSensors[i].getTankSensorData(tankNumber, lightValue);
 
         if (!isnan(temperature) && !isnan(humidity)) {
-            String payload = "{\"boxId\":" + String(boxId) + ",\"tankNumber\":" + String(tankNumber) + ",\"temperature\":" + String(temperature) + ",\"humidity\":" + String(humidity) + ",\"lightValue\":" + String(lightValue) + "}";
+            String payload = "{\"box_id\":" + String(boxId) + ",\"servo_id\":" + String(tankNumber) + ",\"temperature\":" + String(temperature) + ",\"humidity\":" + String(humidity) "}";
 
             Serial.println("Payload:");
             Serial.println(payload);
