@@ -1,7 +1,11 @@
 #include <Servo.h>
 
 #include "HX711.h"
-#include "Arduino_SensorKit.h"
+#include <ArduinoJson.h>
+//#include "Arduino_SensorKit.h"
+#include <WiFi.h>
+#include <HttpClient.h>
+
 
 #define BUTTON_PIN 7   // Pin connected to the button
 #define SERVO_PIN_1 9  // Pin connected to servo 1
@@ -25,14 +29,32 @@ unsigned long buzzerStartTime = 0; // Variable to store the time when the weight
 bool buzzerActive = false; // Flag to track if the buzzer is currently active
 bool servoActivate = false;
 
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
-int boxId;
+const char* ssid = "leosun";
+const char* password = "12345678";
+int boxId = 8;
 int tankId;
 const char* medicineName;
 const char* scheduledTime;
-const char* serverUrl = "https://your-azure-webapp.azurewebsites.net/medicine-reminder";
-const char* updateUrl = "https://your-azure-webapp.azurewebsites.net/updateMedicineTaken";
+
+String boxIdString = String(boxId);
+
+// Concatenate the URL parts
+String serverUrlString = "https://medisyncconnection.azurewebsites.net/api/boxes/" + boxIdString + "/reminder";
+
+// Convert serverUrl to const char*
+const char* serverUrl = serverUrlString.c_str();
+//const char* serverUrl = "https://medisyncconnection.azurewebsites.net/api/boxes/:boxId" + boxId + "/reminder";
+const char* updateUrl = "https://your-azure-webapp.azurewebsites.net/api/updateMedicineTaken";
+int servoMotorId;
+int httpResponseCode;
+DynamicJsonDocument doc(1024);
+
+WiFiClient wifi;
+HttpClient client = HttpClient(wifi, "medisyncconnection.azurewebsites.net", 80);
+
+
+
+
 
 void setup() {
   pinMode(BUTTON_PIN, INPUT);    // Set the button pin as input
@@ -53,13 +75,14 @@ void setup() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("Connecting to WiFi...");
+    WiFi.begin(ssid, password);
   }
   
   Serial.println("Connected to WiFi");
 
-  HTTPClient http;
-  http.begin(serverUrl);
-  
+
+  //http.begin(serverUrl);
+
 }
 
 void loop() {
@@ -69,14 +92,14 @@ void loop() {
   Serial.print(" lbs"); // You can change this to kg but you'll need to refactor the calibration_factor
   Serial.println();
 
-  if (weight > 0.001) {
+  if (weight > 0.005) {
     // Check if the buzzer is not already active
     if (!buzzerActive) {
       buzzerStartTime = millis(); // Start the timer when the weight exceeds 0.01 lbs
       buzzerActive = true;
     } else {
       // Check if 5 minutes have passed since the buzzer started
-      if (millis() - buzzerStartTime >= 0.03 * 60 * 1000) { // Convert 5 minutes to milliseconds
+      if (millis() - buzzerStartTime >= 5 * 60 * 1000) { // Convert 5 minutes to milliseconds
         // Trigger the buzzer
         tone(BUZZER_PIN, 1000);
       }
@@ -85,28 +108,25 @@ void loop() {
     // Weight is not greater than 0.01 lbs
     // Check if the buzzer was active
     if (buzzerActive) {
-      selectedServo != -1 // the tank just dispensed 
       // Stop the buzzer
       noTone(BUZZER_PIN);
       buzzerActive = false;
-
-      //update database that the pill was dispensed
-      UpdateDatabase();
-      //update selectedServo back to -1, ie do not trigger
-      selectedServo = -1;
     }
   }
 
   // Add a delay to prevent continuous checks
-  delay(1000); // Adjust as needed to control the frequency of weight checks
+  delay(3000); // Adjust as needed to control the frequency of weight checks
 
   // servos
 
-  // servos
+  Serial.println(selectedServo);
+  Serial.println(servoMotorId);
 
-  //read if there is a trigger action: if there is no trigger, it returns -1, if it read a signal, it returns the tankId ie servoMotor id
-  servoMotorId = handleMedicineReminder();
-  
+  int servoMotorId = handleMedicineReminder();
+
+  Serial.println(selectedServo);
+  Serial.println(servoMotorId);
+
   if (servoMotorId != -1 && servoMotorId >= 1 && servoMotorId <= 3)  {
   //if (Serial.available() > 0) { // Check if there are characters available
   //  char input = Serial.read(); // Read the input from serial
@@ -161,7 +181,8 @@ void loop() {
       Serial.println("Invalid servo selection. Enter 1, 2, or 3.");
     }
   }
-}
+
+
 
 void triggerServo(Servo servo) {
   // Move the servo to a specific angle
@@ -180,43 +201,50 @@ void triggerServo(Servo servo) {
   delay(1000);
 }
 
-
 int handleMedicineReminder() {
 
-  int httpResponseCode = http.GET();
-  
-  if (httpResponseCode == HTTP_CODE_OK) {
-    String response = http.getString();
+  //int httpResponseCode = http.GET();
+  Serial.println("checking for reminder");
+  client.get(serverUrl);
+
+  //int httpResponseCode = client.responseStatusCode(); 
+  //Serial.println(client.responseStatusCode());
+  //Serial.println(client.responseBody());
+  String responseBody = client.responseBody();
+  Serial.println(responseBody);
+
+  if (!responseBody.isEmpty()) {
+    //String response = client.responseBody();
     
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, response);
     
-    if (error) {
-      Serial.println("No pills to be dispensed now");
-      return -1;
-    }
+    DeserializationError error = deserializeJson(doc, responseBody);
+    
+    //if (error) {
+    //  Serial.println("No pills to be dispensed now");
+    //  return -1;
+    //}
     Serial.println("Pills to dispense in tank");
-    //boxId = doc["boxId"];
-    tankId = doc["tankId"];
+    boxId = doc["boxId"];
+    tankId = 2;
     Serial.println(tankId);
-    medicineName = doc["medicineName"];
-    scheduledTime = doc["scheduledTime"];
+    //medicineName = doc["medicineName"];
+    //scheduledTime = doc["scheduledTime"];
     
     return tankId;
 
   } else {
     Serial.print("HTTP error code: ");
     Serial.println(httpResponseCode);
-    return -1
+    return -1;
   }
-  
-  http.end();
 }
+  
 
+
+/*
 void UpdateDatabase(){
   
   String payload = "{\"boxId\":" + String(boxId) + ",\"tankId\":" + String(tankId) + ",\"medicineName\":" + String(medicineName) + ",\"scheduledTime\":" + String(scheduledTime) + "}";
-
   Serial.println("Payload:");
   Serial.println(payload);
 
@@ -235,4 +263,4 @@ void UpdateDatabase(){
   http.end();
 
 }
-
+*/
