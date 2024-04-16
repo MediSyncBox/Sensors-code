@@ -54,8 +54,6 @@ HttpClient client = HttpClient(wifi, "medisyncconnection.azurewebsites.net", 80)
 
 
 
-
-
 void setup() {
   pinMode(BUTTON_PIN, INPUT);    // Set the button pin as input
   pinMode(BUZZER_PIN, OUTPUT);    // Set the buzzer pin as output
@@ -203,6 +201,28 @@ void triggerServo(Servo servo) {
 
 int handleMedicineReminder() {
 
+    void sendCurrentTime() {
+    // Get the current time
+    time_t now = time(nullptr);
+    char currentTime[30];
+    strftime(currentTime, sizeof(currentTime), "%Y-%m-%dT%H:%M:%S.0000000", localtime(&now));
+  
+    // Create the JSON payload
+    String payload = "{\"boxId\": " + String(boxId) + ", \"currentTime\": \"" + String(currentTime) + "\"}";
+  
+    // Send the HTTPS POST request
+    String url = serverUrl + String(boxId);
+    client.post(url, "application/json", payload);
+  
+    // Read the response
+    while (client.connected()) {
+      if (client.available()) {
+        String response = client.readString();
+        Serial.println("Response: " + response);
+        break;
+      }
+    }
+  }
   //int httpResponseCode = http.GET();
   Serial.println("checking for reminder");
   client.get(serverUrl);
